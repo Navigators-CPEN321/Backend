@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", event => {
     const db = firebase.firestore();
     const users = db.collection('users');
     const groups = db.collection('groups');
-    const events = db.collection('events');
+	const events = db.collection('events');	
     var rapid = new RapidAPI("default-application_5bc03cd1e4b085e3f4089782", "9981cbba-80fd-41b4-b5bb-d76e8ee35535");
 });
 
@@ -12,10 +12,6 @@ function googleLogin(){
     const provider = new firebase.auth.GoogleAuthProvider();
     firebase.auth().signInWithPopup(provider)
 }
-
-
-
-
 
 rapid.call('YelpAPI', 'searchEvent', { 
 	'startDate': '2018-10-12 00:00:00',
