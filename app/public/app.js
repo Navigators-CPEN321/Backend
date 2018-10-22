@@ -40,36 +40,46 @@ rapid.call('YelpAPI', 'searchEvent', {
 }
 
 ////////////////////////////////////////////////////////////////////////
-
-function selectEvents(callback){
-	var category;
-	var max_cost=0;
-	var category_map = {
-	"nightlife":0,
-	"charities":0,
-	"other":0,
-	"food-and-drink":0,
-	"sports-active-life":0,
-	"festivals-fair":0,
-	"visual-arts":0,
-	"performing-arts":0
+var category;
+var max_cost=0;
+var category_map = {
+"nightlife":0,
+"charities":0,
+"other":0,
+"food-and-drink":0,
+"sports-active-life":0,
+"festivals-fair":0,
+"visual-arts":0,
+"performing-arts":0
 };
+function selectEvents(callback){
+	category_map = {
+		"nightlife":0,
+		"charities":0,
+		"other":0,
+		"food-and-drink":0,
+		"sports-active-life":0,
+		"festivals-fair":0,
+		"visual-arts":0,
+		"performing-arts":0
+		};
+ 	max_cost=0;
 	var group1 = firebase.firestore().collection("groups").doc("group1");
 	console.log("first function");
 	group1.get().then(function(doc) {
 	var data = doc.data();
 	var i;
 		
-	for(i=0; i<data.size; i++){
+	for(i=1; i<=data.size; i++){
 		console.log("for loop");
-		data.members[i].get().then(function(doc) {
+		group1.collection("prefs").doc("pref".concat(i.toString())).get().then(function(doc) {
 		var data1 = doc.data();
 		max_cost = max_cost + data1.cost_max;
 		category_map[data1.category]++;
 	})
 }
 })
-callback();
+
 }
 
 function callBackEvent(){
@@ -87,8 +97,27 @@ function callBackEvent(){
 		cost_max: max_cost
 	}, { merge: true });
 	})
+
 }
 
+function findGroupEvents(){
+	var group1 = firebase.firestore().collection("groups").doc("group1");
+	var events = firebase.firestore().collection("events");
+	var sel_events = group1.collection("sel_events");
+	group1.get().then(function(doc) {
+		var data = doc.data();
+		var i = 0;
+		var query = events.where('category', '==', data.category).get()
+    		.then(snapshot => {
+     		 snapshot.forEach(doc1 => {
+				sel_events.doc("event".concat(i.toString())).set(doc1.data());
+				i++;
+      });
+    })
+	
+	
+	})
+}
 
 
 function geth(o){
