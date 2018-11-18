@@ -5,9 +5,9 @@ document.addEventListener("DOMContentLoaded", event => {
 	db.settings(settings);
 });
 
+const functions = require('firebase-functions');
 
-
-function yelpAPI(){
+exports.yelpAPI = functions.https.onCall((parameter) => {
 var rapid = new RapidAPI("default-application_5bc03cd1e4b085e3f4089782", "9981cbba-80fd-41b4-b5bb-d76e8ee35535");
 rapid.call('YelpAPI', 'searchEvent', { 
 	'startDate': '2018-10-31 00:00:00',
@@ -28,9 +28,10 @@ rapid.call('YelpAPI', 'searchEvent', {
 		eventsColl.doc("event".concat(i.toString())).set(payload.events[i]);
 	}
 }).on('error', function (payload) {
-	console.log('errrrrorrrr');
+	throw new functions.https.HttpsError('unknown');
 });
-}
+	
+}); // end of yelpAPI function
 
 /***********************OUR FUNCTIONS************************/
 
@@ -55,7 +56,7 @@ var category_map = {
 "performing-arts":0
 };
 
-function selectEvents(){
+exports.selectEvents = functions.https.onCall((parameter) => {
     // reset the global variables
 	category_map = {
 		"nightlife":0,
@@ -73,7 +74,7 @@ function selectEvents(){
 	for(j=0; j<extra_categories_size; j++){
 		extra_categories[j] = null;
 	}
-	var group = firebase.firestore().collection("groups").doc("group1");
+	var group = firebase.firestore().collection("groups").doc(parameter.group);
 
 	group.get().then(function(doc) {
 	var group_data = doc.data();
@@ -89,11 +90,11 @@ function selectEvents(){
 	})
 }
 })
-}
+});
 
-function writePrefs(){
+exports.writePrefs = functions.https.onCall((parameter) => {
 
-	var group = firebase.firestore().collection("groups").doc("group1");
+	var group = firebase.firestore().collection("groups").doc(parameter.group);
 	group.get().then(function(doc) {
 	var group_data = doc.data();
 	// get the most popular category
@@ -119,10 +120,10 @@ function writePrefs(){
 	}, { merge: true });
 	})
 
-}
+});
 
-function findGroupEvents(){
-	var group = firebase.firestore().collection("groups").doc("group1");
+exports.findGroupEvents = functions.https.onCall((parameter) => {
+	var group = firebase.firestore().collection("groups").doc(parameter.group);
 	var events_pool = firebase.firestore().collection("events");
 	var sel_events = group.collection("sel_events");
 
@@ -141,8 +142,7 @@ function findGroupEvents(){
 	
 	
 	})
-}
-
+});
 
 
 /* Function found online to return the key with max value
