@@ -5,9 +5,8 @@ document.addEventListener("DOMContentLoaded", event => {
 	db.settings(settings);
 });
 
-const functions = require('firebase-functions');
 
-exports.yelpAPI = functions.https.onCall((parameter) => {
+function yelpAPI(){
 var rapid = new RapidAPI("default-application_5bc03cd1e4b085e3f4089782", "9981cbba-80fd-41b4-b5bb-d76e8ee35535");
 rapid.call('YelpAPI', 'searchEvent', { 
 	'startDate': '2018-10-31 00:00:00',
@@ -28,10 +27,10 @@ rapid.call('YelpAPI', 'searchEvent', {
 		eventsColl.doc("event".concat(i.toString())).set(payload.events[i]);
 	}
 }).on('error', function (payload) {
-	throw new functions.https.HttpsError('unknown');
+	console.log("YELP Error");
 });
 	
-}); // end of yelpAPI function
+} // end of yelpAPI function
 
 /***********************OUR FUNCTIONS************************/
 
@@ -56,7 +55,7 @@ var category_map = {
 "performing-arts":0
 };
 
-exports.selectEvents = functions.https.onCall((parameter) => {
+function selectEvents(){
     // reset the global variables
 	category_map = {
 		"nightlife":0,
@@ -74,7 +73,7 @@ exports.selectEvents = functions.https.onCall((parameter) => {
 	for(j=0; j<extra_categories_size; j++){
 		extra_categories[j] = null;
 	}
-	var group = firebase.firestore().collection("groups").doc(parameter.group);
+	var group = firebase.firestore().collection("groups").doc("group_test");
 
 	group.get().then(function(doc) {
 	var group_data = doc.data();
@@ -90,11 +89,11 @@ exports.selectEvents = functions.https.onCall((parameter) => {
 	})
 }
 })
-});
+}
 
-exports.writePrefs = functions.https.onCall((parameter) => {
+function writePrefs(){
 
-	var group = firebase.firestore().collection("groups").doc(parameter.group);
+	var group = firebase.firestore().collection("groups").doc("group_test");
 	group.get().then(function(doc) {
 	var group_data = doc.data();
 	// get the most popular category
@@ -120,11 +119,11 @@ exports.writePrefs = functions.https.onCall((parameter) => {
 	}, { merge: true });
 	})
 
-});
+}
 
-exports.findGroupEvents = functions.https.onCall((parameter) => {
-	var group = firebase.firestore().collection("groups").doc(parameter.group);
-	var events_pool = firebase.firestore().collection("events");
+function findGroupEvents(){
+	var group = firebase.firestore().collection("groups").doc("group_test");
+	var events_pool = firebase.firestore().collection("events_test");
 	var sel_events = group.collection("sel_events");
 
 	group.get().then(function(doc) {
@@ -142,9 +141,67 @@ exports.findGroupEvents = functions.https.onCall((parameter) => {
 	
 	
 	})
-});
+}
+
+function testFunctions(){
+	var group = firebase.firestore().collection("groups").doc("group_test");
+	var sel_events = group.collection("sel_events");
+	
+	group.get().then(function(doc) {
+		var group_data = doc.data();
+		console.log("Checking internal global variables");
+		console.log("Expected cost_max: 80" ); // cost_max == 240/3
+		console.log("Actual   cost_max:",group_cost_max);
+
+		console.log("Expected category: food-and-drink");
+		console.log("Actual   category:",group_category);
+
+		console.log("Checking the group document values");
+		console.log("Expected cost_max: 80" ); // cost_max == 240/3
+		console.log("Actual   cost_max:",group_data.cost_max);
+
+		console.log("Expected category: food-and-drink");
+		console.log("Actual   category:",group_data.category); // category == food-and-drink
+	
+	})
+
+	// seperately test max function
+	
+	var test_map = {
+		"one":0,
+		"two":1,
+		"three":2
+		};
+	console.log("Checking the max map function");
+	console.log("Expected max key: three");
+	console.log("Actual   max key:",geth(test_map));
+
+	test_map = {
+		"one":0,
+		"two":6,
+		"three":2
+		};
+	console.log("Expected max key: two");
+	console.log("Actual   max key:",geth(test_map));
 
 
+	test_map = {
+		"one":-1,
+		"two":0,
+		"three":-9
+		};
+
+		console.log("Expected max key: two");
+		console.log("Actual   max key:",geth(test_map));
+
+	var test_map1 = {
+		"one":0,
+		};
+	console.log("Expected max key: one");
+	console.log("Actual   max key:",geth(test_map1));
+
+
+}
 /* Function found online to return the key with max value
 geth({hi:0, hello:1, devi:2, avi:5}) would return avi */
 
