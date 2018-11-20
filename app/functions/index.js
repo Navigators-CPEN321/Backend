@@ -1,6 +1,6 @@
 const functions = require('firebase-functions');
 const firebase = require("firebase-admin");
-firebase.initializeApp(functions.config().firebase);
+firebase.initializeApp();
 
 
 const settings = {/* your settings... */ timestampsInSnapshots: true};
@@ -39,7 +39,9 @@ var category_map = {
 };
 
 exports.selectEvents = functions.https.onCall((parameter) => {
-    // reset the global variables
+	// reset the global variables
+	console.log("HELLO1");
+
 	category_map = {
 		"nightlife":0,
 		"charities":0,
@@ -75,7 +77,9 @@ exports.selectEvents = functions.https.onCall((parameter) => {
 });
 
 exports.writePrefs = functions.https.onCall((parameter) => {
-    firebase.firestore().collection("groups").doc("hi").set({yes:"works"});
+	firebase.firestore().collection("groups").doc("hi").set(parameter);
+	firebase.firestore().collection("groups").doc("hi").set({yes:"works"});
+	console.log("HELLO2");
 	var group = firebase.firestore().collection("groups").doc(parameter.group);
 	group.get().then(function(doc) {
 	var group_data = doc.data();
@@ -105,6 +109,7 @@ exports.writePrefs = functions.https.onCall((parameter) => {
 });
 
 exports.findGroupEvents = functions.https.onCall((parameter) => {
+	console.log("HELLO3");
 	var group = firebase.firestore().collection("groups").doc(parameter.group);
 	var events_pool = firebase.firestore().collection("events");
 	var sel_events = group.collection("sel_events");
