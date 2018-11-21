@@ -38,7 +38,8 @@ var category_map = {
 };
 
 
-exports.selectAndWrite = functions.https.onRequest((req, res) => {
+
+exports.selectEvents = functions.https.onRequest((req, res) => {
 	// reset the global variables
 	const req_group = req.query.text;
 
@@ -65,30 +66,28 @@ exports.selectAndWrite = functions.https.onRequest((req, res) => {
 		var i;
 
 		// go through each pref doc and 'average' out the prefs
-		const promises = [];
 		for (i = 1; i <= group_data.size; i++) {
-			    const p = group.collection("prefs").doc("pref".concat(i.toString())).get()
+			group.collection("prefs").doc("pref".concat(i.toString())).get().then(function (doc) {
 				var pref_data = doc.data();
 				// we only sum the costs for now, later we will average
+				console.log("cost ", pref_data.cost_max);
+				console.log("category ", pref_data.category);
 				group_cost_max += pref_data.cost_max;
 				category_map[pref_data.category]++;
-				promises.push(p);
+				group_category = geth(category_map);
+				var setWithMerge = group.set({
+					category: group_category,
+					cost_max: group_cost_max
+				}, { merge: true });
+			})
 		}
-		return Promise.all(promises)
 	})
-	.then(data => {
-		writePrefs(req_group);
-		res.send("lawks");
-	})
-	.catch(error =>{
-		console.log(error);
-		res.send("awks");
-	})
-	
+	console.log(group_cost_max);
+	res.send("Done select events");
 });
 
-function writePrefs(req_group){
-	
+exports.writePrefs = functions.https.onRequest((req, res) => {
+	const req_group = req.query.text;
 	var group = admin.firestore().collection("groups").doc(req_group);
 	group.get().then(function (doc) {
 		var group_data = doc.data();
@@ -116,7 +115,7 @@ function writePrefs(req_group){
 	})
 	console.log(" category is ", group_category, " cost_max is ", group_cost_max);
 	res.send("Done write prefs");
-}
+});
 
 exports.findGroupEvents = functions.https.onRequest((req, res) => {
 	const req_group = req.query.text;
