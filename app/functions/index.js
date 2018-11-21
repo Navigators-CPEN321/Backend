@@ -39,19 +39,9 @@ var category_map = {
 
 
 
-exports.selectEvents = functions.firestore
-.document('groups/{groupID}/prefs/{prefID}')
-.onWrite((change, context) => {
+exports.selectEvents = functions.https.onRequest((req, res) => {
 	// reset the global variables
-	const document = change.after.exists ? change.after.data() : null;
-	
-	//const req_group = req.query.text;
-	const newPrefs = change.after.data();
-
-	//find group name
-	const req_group  = getGroup(newPrefs);
-	console.log("SELECT EVENTS CALLED");
-	console.log("GROUP NAME: " + req_group);
+	const req_group = req.query.text;
 
 	category_map = {
 		"nightlife": 0,
@@ -92,47 +82,11 @@ exports.selectEvents = functions.firestore
 			})
 		}
 	})
-	console.log(group_cost_max);
-	//res.send("Done select events");
+	// delete the previous selected events for that group if any
+	deleteSelEvents(req_group);
+	res.send("Done select events");
 });
 
-function getGroup(snapshot) {
-	// You can get the reference (A Firebase object) from a snapshot
-	// using .ref().
-	var ref = snapshot.ref();
-	// Now simply find the parent and return the name.
-	return ref.parent().parent().name();
-  }
-exports.writePrefs = functions.https.onRequest((req, res) => {
-	const req_group = req.query.text;
-	var group = admin.firestore().collection("groups").doc(req_group);
-	group.get().then(function (doc) {
-		var group_data = doc.data();
-		// get the most popular category
-		group_category = geth(category_map);
-
-		/* loop through and select more categories
-		var i;
-		var best_category = group_category;
-		for(i=0; i<extra_categories_size; i++){
-			category_map[best_category] = 0;
-			extra_categories[i] = geth(category_map);
-			best_category = extra_categories[i];
-		}
-		*/
-
-		// average the cost_max 
-		group_cost_max /= group_data.size;
-
-		// write the new found preferences to the group doc
-		var setWithMerge = group.set({
-			category: group_category,
-			cost_max: group_cost_max
-		}, { merge: true });
-	})
-	console.log(" category is ", group_category, " cost_max is ", group_cost_max);
-	res.send("Done write prefs");
-});
 
 exports.findGroupEvents = functions.https.onRequest((req, res) => {
 	const req_group = req.query.text;
@@ -147,9 +101,11 @@ exports.findGroupEvents = functions.https.onRequest((req, res) => {
 		var query = events_pool.where('category', '==', group_data.category).get()
 			.then(snapshot => {
 				snapshot.forEach(event_doc => {
-					// write the events found to sel_events collection
-					sel_events.doc("event".concat(i.toString())).set(event_doc.data());
-					i++;
+					// write the events found to sel_events collection 
+					if(event_doc.data().cost_max <= group_data.cost_max){
+						sel_events.doc("event".concat(i.toString())).set(event_doc.data());
+						i++;
+					}
 				});
 			})
 
@@ -177,3 +133,46 @@ function geth(o) {
 		}
 	}
 }
+
+function deleteSelEvents(group_name){
+	var jobskill_query = admin.firestore().collection('groups').doc(group_name).collection('sel_events');
+	jobskill_query.get().then(function(querySnapshot) {
+  	querySnapshot.forEach(function(doc) {
+    doc.ref.delete();
+  });
+});
+
+}
+
+/**************************NOT USED RIGHT NOW *****************************/
+/*
+exports.writePrefs = functions.https.onRequest((req, res) => {
+	const req_group = req.query.text;
+	var group = admin.firestore().collection("groups").doc(req_group);
+	group.get().then(function (doc) {
+		var group_data = doc.data();
+		// get the most popular category
+		group_category = geth(category_map);
+
+		// loop through and select more categories
+		var i;
+		var best_category = group_category;
+		for(i=0; i<extra_categories_size; i++){
+			category_map[best_category] = 0;
+			extra_categories[i] = geth(category_map);
+			best_category = extra_categories[i];
+		}
+		
+
+		// average the cost_max 
+		group_cost_max /= group_data.size;
+
+		// write the new found preferences to the group doc
+		var setWithMerge = group.set({
+			category: group_category,
+			cost_max: group_cost_max
+		}, { merge: true });
+	})
+	console.log(" category is ", group_category, " cost_max is ", group_cost_max);
+	res.send("Done write prefs");
+}); */
