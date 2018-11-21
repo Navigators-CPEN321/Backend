@@ -39,9 +39,19 @@ var category_map = {
 
 
 
-exports.selectEvents = functions.https.onRequest((req, res) => {
+exports.selectEvents = functions.firestore
+.document('groups/{groupID}/prefs/{prefID}')
+.onWrite((change, context) => {
 	// reset the global variables
-	const req_group = req.query.text;
+	const document = change.after.exists ? change.after.data() : null;
+	
+	//const req_group = req.query.text;
+	const newPrefs = change.after.data();
+
+	//find group name
+	const req_group  = getGroup(newPrefs);
+	console.log("SELECT EVENTS CALLED");
+	console.log("GROUP NAME: " + req_group);
 
 	category_map = {
 		"nightlife": 0,
@@ -83,9 +93,16 @@ exports.selectEvents = functions.https.onRequest((req, res) => {
 		}
 	})
 	console.log(group_cost_max);
-	res.send("Done select events");
+	//res.send("Done select events");
 });
 
+function getGroup(snapshot) {
+	// You can get the reference (A Firebase object) from a snapshot
+	// using .ref().
+	var ref = snapshot.ref();
+	// Now simply find the parent and return the name.
+	return ref.parent().parent().name();
+  }
 exports.writePrefs = functions.https.onRequest((req, res) => {
 	const req_group = req.query.text;
 	var group = admin.firestore().collection("groups").doc(req_group);
