@@ -102,10 +102,8 @@ exports.findGroupEvents = functions.https.onRequest((req, res) => {
 			.then(snapshot => {
 				snapshot.forEach(event_doc => {
 					// write the events found to sel_events collection 
-					if(event_doc.data().cost_max <= group_data.cost_max){
-						sel_events.doc("event".concat(i.toString())).set(event_doc.data());
-						i++;
-					}
+					sel_events.doc("event".concat(i.toString())).set(event_doc.data());
+					i++;
 				});
 			})
 
@@ -114,6 +112,89 @@ exports.findGroupEvents = functions.https.onRequest((req, res) => {
 	console.log("hiiiii");
 	res.send("Done find group events");
 });
+
+function getParent(snapshot) {
+	// You can get the reference (A Firebase object) from a snapshot
+	// using .ref().
+	console.log("Get Parent was called ")
+
+	var ref = snapshot.ref;
+	// Now simply find the parent and return the name.
+	console.log("REFNAME:" + ref.parent.parent.id);
+	return ref.parent.parent.id;
+}
+
+exports.onPrefUpdate =
+	functions.firestore.document("groups/{group}/prefs/{pref}").onWrite(change => {
+
+		console.log("ON PREF was called 1");
+		const before = change.before;
+		const req_group = getParent(before);
+		console.log("groupName: ", req_group);
+
+		//INITIALIZE CATEGORY MAP
+		category_map = {
+			"nightlife": 0,
+			"charities": 0,
+			"other": 0,
+			"food-and-drink": 0,
+			"sports-active-life": 0,
+			"festivals-fair": 0,
+			"visual-arts": 0,
+			"performing-arts": 0
+		};
+		group_cost_max = 0;
+
+		var j;
+		for (j = 0; j < extra_categories_size; j++) {
+			extra_categories[j] = null;
+		}
+		var group = admin.firestore().collection("groups").doc(req_group);
+
+		group.get().then(function (doc) {
+			var group_data = doc.data();
+			var i;
+
+			// go through each pref doc and 'average' out the prefs
+			const promises = [];
+			for (i = 1; i <= 3; i++) {
+				console.log("attempting to find pref" + i);
+				const p = group.collection("prefs").doc("pref".concat(i.toString())).get();
+				console.log("found pref" + i);
+				promises.push(p);
+			}
+			return Promise.all(promises);
+		})
+			.then(prefSnapshots => {
+				prefSnapshots.forEach(prefSnap => { 
+					console.log("pref: ", pref_data.id);	
+					var pref_data = prefSnap.data();
+					// we only sum the costs for now, later we will average
+					console.log("cost ", pref_data.cost_max);
+					console.log("category ", pref_data.category);
+					group_cost_max += pref_data.cost_max;
+					category_map[pref_data.category]++;
+					group_category = geth(category_map);
+				})
+				return group.set({
+					category: group_category,
+					cost_max: group_cost_max
+				}, { merge: true });
+			})
+			.catch(error=>{
+				console.log("promisers didn't finish");
+				return group.set({
+					category: group_category,
+					cost_max: group_cost_max
+				}, { merge: true });
+			})
+	
+	})
+// delete the previous selected events for that group if any
+//deleteSelEvents(req_group);
+//REINITIALIZE CATEGORY MAP
+
+
 
 
 /* Function found online to return the key with max value
@@ -134,13 +215,13 @@ function geth(o) {
 	}
 }
 
-function deleteSelEvents(group_name){
+function deleteSelEvents(group_name) {
 	var jobskill_query = admin.firestore().collection('groups').doc(group_name).collection('sel_events');
-	jobskill_query.get().then(function(querySnapshot) {
-  	querySnapshot.forEach(function(doc) {
-    doc.ref.delete();
-  });
-});
+	jobskill_query.get().then(function (querySnapshot) {
+		querySnapshot.forEach(function (doc) {
+			doc.ref.delete();
+		});
+	});
 
 }
 
@@ -176,3 +257,4 @@ exports.writePrefs = functions.https.onRequest((req, res) => {
 	console.log(" category is ", group_category, " cost_max is ", group_cost_max);
 	res.send("Done write prefs");
 }); */
+
