@@ -116,21 +116,21 @@ exports.findGroupEvents = functions.https.onRequest((req, res) => {
 function getParent(snapshot) {
 	// You can get the reference (A Firebase object) from a snapshot
 	// using .ref().
-	console.log("Get Parent was called ")
+	
 
 	var ref = snapshot.ref;
 	// Now simply find the parent and return the name.
-	console.log("REFNAME:" + ref.parent.parent.id);
+
 	return ref.parent.parent.id;
 }
 
 exports.onPrefUpdate =
 	functions.firestore.document("groups/{group}/prefs/{pref}").onWrite(change => {
 
-		console.log("ON PREF was called 2");
+	
 		const before = change.before;
 		const req_group = getParent(before);
-		console.log("groupName: ", req_group);
+		
 
 		//INITIALIZE CATEGORY MAP
 		category_map = {
@@ -157,16 +157,15 @@ exports.onPrefUpdate =
 
 			// go through each pref doc and 'average' out the prefs
 			const promises = [];
-			for (i = 1; i <= 3; i++) {
-				console.log("attempting to find pref" + i);
+			for (i = 1; i <= group_data.size; i++) {
+				
 				const p = group.collection("prefs").doc("pref".concat(i.toString())).get();
-				console.log("found pref" + i);
+			
 				promises.push(p);
 			}
 			return Promise.all(promises);
 		})
 			.then(prefSnapshots => {
-				console.log("Life sux");
 				prefSnapshots.forEach(prefSnap => { 
 					var pref_data = prefSnap.data();
 	
@@ -182,7 +181,6 @@ exports.onPrefUpdate =
 				}, { merge: true });
 			})
 			.catch(error=>{
-				console.log("ERROROROROR");
 				return null;
 			})
 			return 0;
@@ -195,12 +193,12 @@ exports.onGroupUpdate =
 functions.firestore.document("groups/{group}/groupprefs/{groupprefs}").onWrite(change => {
 
 	const group_data = change.after.data();
-
+	console.log("HARMANS DUMB");
 	const group = getParent(change.after);
 	var events_pool = admin.firestore().collection("events");
-	var sel_events = group.collection("sel_events");
-	console.log("group name: ", group);
-
+	var sel_events = admin.firestore().collection("groups").doc(group).collection("sel_events");
+	
+	
 	var i = 0;
 	// query for the events
 		var query = events_pool.where('category', '==', group_data.category).get()
