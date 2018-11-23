@@ -127,7 +127,7 @@ function getParent(snapshot) {
 exports.onPrefUpdate =
 	functions.firestore.document("groups/{group}/prefs/{pref}").onWrite(change => {
 
-		console.log("ON PREF was called 1");
+		console.log("ON PREF was called 2");
 		const before = change.before;
 		const req_group = getParent(before);
 		console.log("groupName: ", req_group);
@@ -166,34 +166,57 @@ exports.onPrefUpdate =
 			return Promise.all(promises);
 		})
 			.then(prefSnapshots => {
+				console.log("Life sux");
 				prefSnapshots.forEach(prefSnap => { 
-					console.log("pref: ", pref_data.id);	
 					var pref_data = prefSnap.data();
+	
 					// we only sum the costs for now, later we will average
-					console.log("cost ", pref_data.cost_max);
-					console.log("category ", pref_data.category);
 					group_cost_max += pref_data.cost_max;
 					category_map[pref_data.category]++;
 					group_category = geth(category_map);
+				
 				})
-				return group.set({
+				return group.collection("groupprefs").doc("groupprefs").set({
 					category: group_category,
 					cost_max: group_cost_max
 				}, { merge: true });
 			})
 			.catch(error=>{
-				console.log("promisers didn't finish");
-				return group.set({
-					category: group_category,
-					cost_max: group_cost_max
-				}, { merge: true });
+				console.log("ERROROROROR");
+				return null;
 			})
-	
+			return 0;
 	})
 // delete the previous selected events for that group if any
 //deleteSelEvents(req_group);
 //REINITIALIZE CATEGORY MAP
 
+exports.onGroupUpdate = 
+functions.firestore.document("groups/{group}/groupprefs/{groupprefs}").onWrite(change => {
+	const before = change.before;
+	const req_group = getParent(before);
+
+	var group = admin.firestore().collection("groups").doc(req_group);
+	var events_pool = admin.firestore().collection("events");
+	var sel_events = group.collection("sel_events");
+
+	group.get().then(function (doc) {
+		var group_data = doc.data();
+		var i = 0;
+		// query for the events
+		var query = events_pool.where('category', '==', group_data.category).get()
+			.then(snapshot => {
+				snapshot.forEach(event_doc => {
+					// write the events found to sel_events collection 
+					sel_events.doc("event".concat(i.toString())).set(event_doc.data());
+					i++;
+				});
+			})
+
+
+	})
+	return 0;
+})
 
 
 
