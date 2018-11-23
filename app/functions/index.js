@@ -193,17 +193,16 @@ exports.onPrefUpdate =
 
 exports.onGroupUpdate = 
 functions.firestore.document("groups/{group}/groupprefs/{groupprefs}").onWrite(change => {
-	const before = change.before;
-	const req_group = getParent(before);
 
-	var group = admin.firestore().collection("groups").doc(req_group);
+	const group_data = change.after.data();
+
+	const group = getParent(change.after);
 	var events_pool = admin.firestore().collection("events");
 	var sel_events = group.collection("sel_events");
+	console.log("group name: ", group);
 
-	group.get().then(function (doc) {
-		var group_data = doc.data();
-		var i = 0;
-		// query for the events
+	var i = 0;
+	// query for the events
 		var query = events_pool.where('category', '==', group_data.category).get()
 			.then(snapshot => {
 				snapshot.forEach(event_doc => {
@@ -214,7 +213,7 @@ functions.firestore.document("groups/{group}/groupprefs/{groupprefs}").onWrite(c
 			})
 
 
-	})
+
 	return 0;
 })
 
