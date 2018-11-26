@@ -26,7 +26,7 @@ var category_map = {
 	"nightlife": 0,
 	"food-and-drink": 0,
 	"sports-active-life": 0,
-	"festivals-fair": 0,
+	"festivals-fairs": 0,
 	"arts": 0
 };
 var group_lat = 0;
@@ -55,7 +55,7 @@ exports.onPrefUpdate =
 			"nightlife": 0,
 			"food-and-drink": 0,
 			"sports-active-life": 0,
-			"festivals-fair": 0,
+			"festivals-fairs": 0,
 			"arts": 0
 		};
 		group_cost_max = 0;
