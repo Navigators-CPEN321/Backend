@@ -162,7 +162,14 @@ exports.onGroupUpdate =
 			event_dists.sort(compare);
 			var k;
 			var promises1 = [];
-			for (k = 0; k < 10; k++) {
+			var limit;
+			if(event_dists.length < 10){
+				limit = event_dists.length;
+			}
+			else{
+				limit = 10;
+			}
+			for (k = 0; k < limit; k++) {
 				const p1 = admin.firestore().collection(group_data.category).doc("events").collection(event_dists[k].price).doc(event_dists[k].eventid).get()
 				promises1.push(p1);
 			}
