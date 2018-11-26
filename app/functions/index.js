@@ -64,7 +64,7 @@ exports.onPrefUpdate =
 
 		var group = admin.firestore().collection("groups").doc(req_group);
 		var location_count = 0;
-		var group_size;
+		var group_size =1;
 		group.get().then(function (doc) {
 			var group_data = doc.data();
 			location_count = group_data.size;
@@ -95,8 +95,10 @@ exports.onPrefUpdate =
 						}
 					})
 					group_cost_max /= group_size;
-					group_long /= location_count;
-					group_lat /= location_count;
+					if (location_count != 0) {
+						group_long /= location_count;
+						group_lat /= location_count;
+					}
 					return group.collection("groupprefs").doc("groupprefs").set({
 						category: group_category,
 						cost_max: group_cost_max,
@@ -163,10 +165,10 @@ exports.onGroupUpdate =
 			var k;
 			var promises1 = [];
 			var limit;
-			if(event_dists.length < 10){
+			if (event_dists.length < 10) {
 				limit = event_dists.length;
 			}
-			else{
+			else {
 				limit = 10;
 			}
 			for (k = 0; k < limit; k++) {
