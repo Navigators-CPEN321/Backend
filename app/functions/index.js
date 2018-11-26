@@ -48,12 +48,9 @@ function getParent(snapshot) {
 exports.onPrefUpdate =
 	functions.firestore.document("groups/{group}/prefs/{pref}").onWrite(change => {
 
-
 		const before = change.before;
 		const req_group = getParent(before);
 
-
-		//INITIALIZE CATEGORY MAP
 		category_map = {
 			"nightlife": 0,
 			"food-and-drink": 0,
@@ -65,11 +62,6 @@ exports.onPrefUpdate =
 		group_lat = 0;
 		group_long = 0;
 
-
-		group_category1 = null;
-		group_category2 = null;
-		deleteSelEvents(req_group);
-
 		var group = admin.firestore().collection("groups").doc(req_group);
 		var location_count = 0;
 		var group_size;
@@ -80,76 +72,54 @@ exports.onPrefUpdate =
 			var i;
 
 			// go through each pref doc and 'average' out the prefs
-			const promises = [];
-			for (i = 1; i <= group_data.size; i++) {
 
-				const p = group.collection("prefs").doc("pref".concat(i.toString())).get();
+			group.collection("prefs").get()
+				.then(prefCol => {
+					prefCol.docs.forEach(prefSnap => {
+						if (prefSnap.exists) {
+							var pref_data = prefSnap.data();
 
-				promises.push(p);
-			}
-			return Promise.all(promises);
-		})
-			.then(prefSnapshots => {
-				prefSnapshots.forEach(prefSnap => {
-					if (prefSnap.exists) {
-						var pref_data = prefSnap.data();
-
-						// we only sum the costs for now, later we will average
-						group_cost_max += pref_data.cost_max;
-						category_map[pref_data.category]++;
-						group_category = geth(category_map);
-						if (pref_data.longitude == 0) {
-							location_count--;
+							// we only sum the costs for now, later we will average
+							group_cost_max += pref_data.cost_max;
+							if (pref_data.category != null) {
+								category_map[pref_data.category]++;
+							}
+							group_category = geth(category_map);
+							if (pref_data.longitude == 0) {
+								location_count--;
+							}
+							else {
+								group_lat += pref_data.latitude;
+								group_long += pref_data.longitude;
+							}
 						}
-						else {
-							group_lat += pref_data.latitude;
-							group_long += pref_data.longitude;
-						}
-					}
-
+					})
+					group_cost_max /= group_size;
+					group_long /= location_count;
+					group_lat /= location_count;
+					return group.collection("groupprefs").doc("groupprefs").set({
+						category: group_category,
+						cost_max: group_cost_max,
+						longitude: group_long,
+						latitude: group_lat
+					}, { merge: true });
 				})
+				.catch(error => {
+					console.log(error);
+					return null;
+				})
+		})
 
-				category_map[group_category] = 0;
-				group_category1 = geth(category_map);
-				if (category_map[group_category1] == 0) {
-					group_category1 = null;
-					group_category2 = null;
-				}
-				else {
-					category_map[group_category1] = 0;
-					group_category2 = geth(category_map);
-					if (category_map[group_category2] == 0) {
-						group_category2 = null;
-					}
-				}
-				console.log("v13");
-
-				group_cost_max /= group_size;
-				group_long /= location_count;
-				group_lat /= location_count;
-
-				return group.collection("groupprefs").doc("groupprefs").set({
-					category: group_category,
-					category1: group_category1,
-					category2: group_category2,
-					cost_max: group_cost_max,
-					longitude: group_long,
-					latitude: group_lat
-				}, { merge: true });
-			})
-			.catch(error => {
-				return null;
-			})
 		return 0;
 	})
 
 
 exports.onGroupUpdate =
 	functions.firestore.document("groups/{group}/groupprefs/{groupprefs}").onWrite(change => {
-		console.log("i have no SHAFT");
 		const group_data = change.after.data();
 		const group = getParent(change.after);
 		var cost = group_data.cost_max;
+		deleteSelEvents(group);
 		var price;
 		var event_dists = [];
 		if (cost > 80) {
@@ -174,7 +144,6 @@ exports.onGroupUpdate =
 		}
 		Promise.all(promises).then(eventSnapshots => {
 			eventSnapshots.forEach(eventColSnap => {
-				console.log("entered collection snap");
 				eventColSnap.docs.forEach(eventSnap => {
 					var event_data = eventSnap.data();
 					var lat1 = event_data.coordinates.latitude;
@@ -200,15 +169,15 @@ exports.onGroupUpdate =
 			Promise.all(promises1).then(eventArr => {
 				var h;
 				for (h = 0; h < eventArr.length; h++) {
-					admin.firestore().collection('groups').doc(group).collection('sel_events').doc("event".concat(h.toString())).set(eventArr[h].data());
-					admin.firestore().collection('groups').doc(group).collection('sel_events').doc("event".concat(h.toString())).set({distance: event_dists[h].dist}, { merge: true });
+					admin.firestore().collection('groups').doc(group).collection('sel_events').doc("event".concat(h.toString())).set({ dist: event_dists[h].dist }, { merge: true });
+					admin.firestore().collection('groups').doc(group).collection('sel_events').doc("event".concat(h.toString())).set(eventArr[h].data(), { merge: true });
+
 				}
 			})
 
 		})
 			.catch(err => {
 				console.log(err);
-				console.log("FAIL WHALE");
 				return null;
 			})
 
